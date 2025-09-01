@@ -1,0 +1,5 @@
+﻿pyside6>=6.5.0
+pywin32>=306
+pynput>=1.7.6
+psutil>=5.9.6
+typing>=3.7.4
