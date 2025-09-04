@@ -25,7 +25,8 @@ class AutomationStep:
             delay: float = 0.0,
             text: str = "",
             click_count: int = 1,
-            click_interval: float = 0.05):
+            click_interval: float = 0.05,
+            name: str = ""):
         self.x: float = x  # 相对坐标（百分比）
         self.y: float = y  # 相对坐标（百分比）
         self.action: str = action
@@ -33,6 +34,7 @@ class AutomationStep:
         self.text: str = text
         self.click_count: int = click_count  # 点击次数
         self.click_interval: float = click_interval  # 点击间隔（秒）
+        self.name: str = name  # 步骤名称
 
     def to_dict(self) -> Dict:
         """转换为字典"""
@@ -43,7 +45,8 @@ class AutomationStep:
             'delay': self.delay,
             'text': self.text,
             'click_count': self.click_count,
-            'click_interval': self.click_interval
+            'click_interval': self.click_interval,
+            'name': self.name
         }
 
     @classmethod
@@ -61,7 +64,8 @@ class AutomationStep:
             delay=float(data.get('delay', 0.0)),
             text=data.get('text', ''),
             click_count=int(data.get('click_count', 1)),
-            click_interval=float(data.get('click_interval', 0.05))
+            click_interval=float(data.get('click_interval', 0.05)),
+            name=data.get('name', '')
         )
 
 

@@ -181,6 +181,7 @@ class StepEditDialog(QDialog):
         self.y: float = y
 
         # UI组件
+        self.name_edit: Optional[QLineEdit] = None  # 添加名称编辑框
         self.x_spinbox: Optional[QDoubleSpinBox] = None
         self.y_spinbox: Optional[QDoubleSpinBox] = None
         self.action_combo: Optional[QComboBox] = None
@@ -199,7 +200,7 @@ class StepEditDialog(QDialog):
         # 设置窗口属性
         self.setWindowTitle("编辑步骤")
         self.setModal(True)
-        self.resize(400, 280)  # 稍微增加宽度以容纳坐标输入框
+        self.resize(400, 320)  # 增加高度以容纳名称输入框
 
         # 创建UI
         self.init_ui()
@@ -210,6 +211,16 @@ class StepEditDialog(QDialog):
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
         layout.setContentsMargins(15, 15, 15, 15)
+
+        # 步骤名称
+        name_layout = QHBoxLayout()
+        name_layout.addWidget(QLabel("步骤名称:"))
+        self.name_edit = QLineEdit()
+        self.name_edit.setPlaceholderText("请输入步骤名称（可选）")
+        if self.step and self.step.name:
+            self.name_edit.setText(self.step.name)
+        name_layout.addWidget(self.name_edit)
+        layout.addLayout(name_layout)
 
         # 坐标编辑
         coord_layout = QGridLayout()
@@ -265,7 +276,7 @@ class StepEditDialog(QDialog):
             self.step.click_interval if self.step and hasattr(
                 self.step, 'click_interval') else 0.05)  # 默认50ms
         self.click_interval_spinbox.setSuffix(" 秒")
-        self.click_interval_spinbox.setToolTip("设置每次点击之间的间隔时间（0.001-999999秒）")
+        self.click_interval_spinbox.setToolTip("设置每次点击之间的间隔时间（0.001-60秒）")
         click_count_layout.addWidget(self.click_interval_spinbox)
 
         click_count_layout.addStretch()
@@ -328,6 +339,14 @@ class StepEditDialog(QDialog):
 
     def get_step(self) -> AutomationStep:
         """获取编辑后的步骤"""
+        # 生成默认步骤名称（如果用户未输入）
+        name = self.name_edit.text().strip()
+        if not name:
+            action = self.action_combo.currentText()
+            x_percent = self.x_spinbox.value()
+            y_percent = self.y_spinbox.value()
+            name = f"{action} ({x_percent:.1f}%, {y_percent:.1f}%)"
+            
         return AutomationStep(
             x=self.x_spinbox.value() / 100.0,  # 转换回0-1范围
             y=self.y_spinbox.value() / 100.0,  # 转换回0-1范围
@@ -335,7 +354,8 @@ class StepEditDialog(QDialog):
             delay=self.delay_spinbox.value(),
             text=self.text_edit.text(),
             click_count=self.click_count_spinbox.value(),
-            click_interval=self.click_interval_spinbox.value()
+            click_interval=self.click_interval_spinbox.value(),
+            name=name
         )
 
     def closeEvent(self, event):

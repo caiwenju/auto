@@ -54,7 +54,15 @@ class StepItemWidget(QWidget):
         layout.setContentsMargins(5, 2, 5, 2)
 
         # 步骤信息
-        step_text = f"步骤 {self.index + 1}: ({self.step.x:.1%}, {self.step.y:.1%}) - {self.step.action}"
+        step_text = f"步骤 {self.index + 1}: "
+        
+        # 添加步骤名称（如果有）
+        if hasattr(self.step, 'name') and self.step.name:
+            step_text += f"{self.step.name}"
+        else:
+            step_text += f"({self.step.x:.1%}, {self.step.y:.1%}) - {self.step.action}"
+            
+        # 添加其他信息
         if self.step.delay > 0:
             step_text += f" [延迟: {self.step.delay}s]"
         if self.step.text:
@@ -66,6 +74,7 @@ class StepItemWidget(QWidget):
                     self.step,
                     'click_interval') and self.step.click_interval != 0.05:
                 step_text += f" [间隔: {self.step.click_interval}s]"
+        
         info_label = QLabel(step_text)
         layout.addWidget(info_label)
 
