@@ -193,6 +193,13 @@ class FeatureCard(QWidget):
             "font-size: 16px; font-weight: bold; color: #212529;")
         top_layout.addWidget(name_label)
 
+        # 分组信息
+        if hasattr(self.feature, 'group') and self.feature.group:
+            group_label = QLabel(f"[{self.feature.group}]")
+            group_label.setStyleSheet(
+                "color: #6c757d; font-size: 12px; padding: 2px 6px; border-radius: 4px; background-color: #e9ecef;")
+            top_layout.addWidget(group_label)
+
         # 状态指示器
         self.status_label = QLabel(self.status)
         self.status_label.setStyleSheet(

@@ -32,6 +32,55 @@
         "click_interval": 0.05,
         "name": ""
       }
-    ]
+    ],
+    "group": "默认"
+  },
+  {
+    "name": "测试功能1",
+    "steps": [
+      {
+        "x": 0.5,
+        "y": 0.5,
+        "action": "左键单击",
+        "delay": 0.5,
+        "text": "",
+        "click_count": 1,
+        "click_interval": 0.05,
+        "name": "点击中心"
+      }
+    ],
+    "group": "测试分组"
+  },
+  {
+    "name": "测试功能2",
+    "steps": [
+      {
+        "x": 0.3,
+        "y": 0.3,
+        "action": "输入文本",
+        "delay": 0.0,
+        "text": "Hello World",
+        "click_count": 1,
+        "click_interval": 0.05,
+        "name": "输入文本"
+      }
+    ],
+    "group": "测试分组"
+  },
+  {
+    "name": "系统功能",
+    "steps": [
+      {
+        "x": 0.1,
+        "y": 0.1,
+        "action": "右键单击",
+        "delay": 1.0,
+        "text": "",
+        "click_count": 1,
+        "click_interval": 0.05,
+        "name": "右键菜单"
+      }
+    ],
+    "group": "系统工具"
   }
 ]

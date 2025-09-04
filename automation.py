@@ -355,15 +355,17 @@ class AutomationExecutor(QThread):
 class AutomationFeature:
     """自动化功能类"""
 
-    def __init__(self, name: str, steps: List[AutomationStep]):
+    def __init__(self, name: str, steps: List[AutomationStep], group: str = "默认"):
         self.name: str = name
         self.steps: List[AutomationStep] = steps
+        self.group: str = group  # 功能分组
 
     def to_dict(self) -> Dict:
         """转换为字典"""
         return {
             'name': self.name,
-            'steps': [step.to_dict() for step in self.steps]
+            'steps': [step.to_dict() for step in self.steps],
+            'group': self.group
         }
 
     @classmethod
@@ -371,7 +373,8 @@ class AutomationFeature:
         """从字典创建实例"""
         return cls(
             name=data['name'],
-            steps=[AutomationStep.from_dict(step) for step in data['steps']]
+            steps=[AutomationStep.from_dict(step) for step in data['steps']],
+            group=data.get('group', '默认')
         )
 
 
@@ -420,3 +423,16 @@ class FeatureManager:
         if 0 <= index < len(self.features):
             del self.features[index]
             self.save_features() 
+
+    def get_all_groups(self) -> List[str]:
+        """获取所有可用的分组"""
+        groups = set()
+        for feature in self.features:
+            if hasattr(feature, 'group') and feature.group:
+                groups.add(feature.group)
+        return sorted(list(groups))
+
+    def get_features_by_group(self, group: str) -> List[AutomationFeature]:
+        """根据分组获取功能列表"""
+        return [feature for feature in self.features 
+                if hasattr(feature, 'group') and feature.group == group] 

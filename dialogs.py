@@ -24,6 +24,7 @@ class FeatureDialog(QDialog):
 
         # UI组件
         self.name_edit: Optional[QLineEdit] = None
+        self.group_combo: Optional[QComboBox] = None  # 添加分组选择框
         self.steps_list: Optional[StepListWidget] = None
         self.ok_button: Optional[QPushButton] = None
         self.cancel_button: Optional[QPushButton] = None
@@ -54,6 +55,38 @@ class FeatureDialog(QDialog):
             self.name_edit.setText(self.feature.name)
         name_layout.addWidget(self.name_edit)
         layout.addLayout(name_layout)
+
+        # 功能分组
+        group_layout = QHBoxLayout()
+        group_layout.addWidget(QLabel("功能分组:"))
+        self.group_combo = QComboBox()
+        self.group_combo.setFixedHeight(32)
+        self.group_combo.setEditable(True)
+        self.group_combo.setPlaceholderText("输入或选择分组")
+        
+        # 添加默认分组选项
+        self.group_combo.addItem("默认")
+        
+        # 添加现有的分组选项（如果父窗口有 feature_manager）
+        if hasattr(self.parent(), 'feature_manager'):
+            existing_groups = self.parent().feature_manager.get_all_groups()
+            for group in existing_groups:
+                if group != "默认" and self.group_combo.findText(group) == -1:
+                    self.group_combo.addItem(group)
+        
+        # 如果有现有功能，设置其分组
+        if self.feature and hasattr(self.feature, 'group'):
+            current_group = self.feature.group
+            if current_group != "默认":
+                # 如果当前分组不在列表中，添加它
+                if self.group_combo.findText(current_group) == -1:
+                    self.group_combo.addItem(current_group)
+            self.group_combo.setCurrentText(current_group)
+        else:
+            self.group_combo.setCurrentText("默认")
+            
+        group_layout.addWidget(self.group_combo)
+        layout.addLayout(group_layout)
 
         # 步骤列表标题
         steps_label = QLabel("步骤列表（可拖拽调整顺序）:")
@@ -162,7 +195,8 @@ class FeatureDialog(QDialog):
         """获取编辑后的功能"""
         return AutomationFeature(
             name=self.name_edit.text(),
-            steps=self.steps
+            steps=self.steps,
+            group=self.group_combo.currentText()
         )
 
 
