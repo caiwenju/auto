@@ -1,0 +1,34 @@
+[
+  {
+    "name": "开",
+    "steps": [
+      {
+        "x": 0.1646,
+        "y": 0.27449999999999997,
+        "action": "左键单击",
+        "delay": 1.0,
+        "text": "",
+        "click_count": 1,
+        "click_interval": 0.05
+      },
+      {
+        "x": 0.1641,
+        "y": 0.27940000000000004,
+        "action": "输入文本",
+        "delay": 1.0,
+        "text": "kb",
+        "click_count": 1,
+        "click_interval": 0.05
+      },
+      {
+        "x": 0.2089,
+        "y": 0.27940000000000004,
+        "action": "左键单击",
+        "delay": 0.0,
+        "text": "",
+        "click_count": 1,
+        "click_interval": 0.05
+      }
+    ]
+  }
+]
