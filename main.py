@@ -4,11 +4,11 @@
 import sys
 import time
 import json
-from typing import List, Optional
+from typing import Optional
 from PySide6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QGridLayout, QLabel, QPushButton, QListWidget, QListWidgetItem,
-    QComboBox, QGroupBox, QMessageBox, QInputDialog, QLineEdit,
+    QGridLayout, QLabel, QPushButton, QListWidget,
+    QComboBox, QGroupBox, QMessageBox, QLineEdit,
     QDialog, QFileDialog, QTabWidget, QScrollArea, QSystemTrayIcon
 )
 from PySide6.QtCore import Qt, QTimer
@@ -20,7 +20,7 @@ import win32con
 from window_manager import WindowManager
 from coordinate_capture import CoordinateCapture
 from automation import AutomationStep, AutomationFeature, FeatureManager, AutomationExecutor
-from ui_components import StepListWidget, FeatureCard, FeatureCardWidget
+from ui_components import StepListWidget, FeatureCardWidget, GroupCard
 from dialogs import FeatureDialog, StepEditDialog
 
 
@@ -427,7 +427,7 @@ class MainWindow(QMainWindow):
         self.update_feature_cards()
 
     def update_feature_cards(self):
-        """更新功能卡片显示（按分组显示）"""
+        """更新功能卡片显示（使用可折叠分组卡片）"""
         # 清除旧的卡片，但保留最后的弹性空间
         while self.feature_cards_layout.count() > 1:
             item = self.feature_cards_layout.takeAt(0)
@@ -445,105 +445,45 @@ class MainWindow(QMainWindow):
         # 按分组名称排序
         sorted_groups = sorted(features_by_group.keys())
 
-        # 为每个分组创建标题和卡片
+        # 为每个分组创建分组卡片
         for group_name in sorted_groups:
-            # 创建分组标题
-            group_label = QLabel(f"📁 {group_name}")
-            group_label.setStyleSheet("""
-                QLabel {
-                    font-size: 16px;
-                    font-weight: bold;
-                    color: #495057;
-                    background-color: #e9ecef;
-                    padding: 8px 12px;
-                    border-radius: 6px;
-                    margin: 10px 0px 5px 0px;
-                    border-left: 4px solid #007bff;
-                }
-            """)
+            group_features = features_by_group[group_name]
+            group_card = GroupCard(group_name, group_features, self)
+            # 在弹性空间之前插入分组卡片
             self.feature_cards_layout.insertWidget(
-                self.feature_cards_layout.count() - 1, group_label)
-
-            # 添加该分组下的所有功能卡片
-            for i, feature in features_by_group[group_name]:
-                card = FeatureCard(feature, i, self)
-                # 在弹性空间之前插入卡片
-                self.feature_cards_layout.insertWidget(
-                    self.feature_cards_layout.count() - 1, card)
-
-            # 在分组之间添加一些间距
-            if group_name != sorted_groups[-1]:  # 不是最后一个分组
-                spacer = QWidget()
-                spacer.setFixedHeight(15)
-                self.feature_cards_layout.insertWidget(
-                    self.feature_cards_layout.count() - 1, spacer)
+                self.feature_cards_layout.count() - 1, group_card)
 
     def filter_features(self):
         """根据搜索框内容过滤功能（支持按分组和名称搜索）"""
         search_text = self.search_box.text().lower()
 
-        # 遍历所有项目，处理分组标题和功能卡片
+        # 遍历所有分组卡片
         for i in range(self.feature_cards_layout.count() - 1):
             item = self.feature_cards_layout.itemAt(i)
             if item and item.widget():
                 widget = item.widget()
                 
-                # 如果是分组标题
-                if isinstance(widget, QLabel) and widget.text().startswith("📁"):
-                    # 检查该分组下是否有匹配的功能
-                    group_has_matches = False
-                    j = i + 1
-                    while j < self.feature_cards_layout.count() - 1:
-                        next_item = self.feature_cards_layout.itemAt(j)
-                        if next_item and next_item.widget():
-                            next_widget = next_item.widget()
-                            # 如果遇到下一个分组标题，停止检查
-                            if isinstance(next_widget, QLabel) and next_widget.text().startswith("📁"):
-                                break
-                            # 如果是功能卡片且匹配搜索条件
-                            if hasattr(next_widget, 'feature') and search_text in next_widget.feature.name.lower():
-                                group_has_matches = True
-                                break
-                        j += 1
-                    widget.setVisible(group_has_matches)
-                
-                # 如果是功能卡片
-                elif hasattr(widget, 'feature'):
-                    if search_text in widget.feature.name.lower():
-                        widget.setVisible(True)
+                # 如果是分组卡片
+                if hasattr(widget, 'group_name'):
+                    # 检查分组名称是否匹配
+                    group_matches = search_text in widget.group_name.lower()
+                    
+                    # 检查该分组下的功能是否匹配
+                    feature_cards = widget.get_feature_cards()
+                    feature_matches = any(
+                        search_text in card.feature.name.lower() 
+                        for card in feature_cards
+                    )
+                    
+                    # 如果分组名称或功能名称匹配，显示分组卡片
+                    if group_matches or feature_matches:
+                        widget.set_visible(True)
+                        # 如果分组名称不匹配但功能匹配，展开分组
+                        if not group_matches and feature_matches:
+                            widget.is_collapsed = True
+                            widget.toggle_collapse()
                     else:
-                        widget.setVisible(False)
-                
-                # 如果是间距组件
-                elif isinstance(widget, QWidget) and widget.sizePolicy().verticalPolicy() == widget.sizePolicy().Policy.Fixed:
-                    # 检查前后是否有可见的功能卡片
-                    has_visible_before = False
-                    has_visible_after = False
-                    
-                    # 检查前面
-                    for j in range(i-1, -1, -1):
-                        prev_item = self.feature_cards_layout.itemAt(j)
-                        if prev_item and prev_item.widget():
-                            prev_widget = prev_item.widget()
-                            if hasattr(prev_widget, 'feature') and prev_widget.isVisible():
-                                has_visible_before = True
-                                break
-                            elif isinstance(prev_widget, QLabel) and prev_widget.text().startswith("📁"):
-                                break
-                    
-                    # 检查后面
-                    for j in range(i+1, self.feature_cards_layout.count() - 1):
-                        next_item = self.feature_cards_layout.itemAt(j)
-                        if next_item and next_item.widget():
-                            next_widget = next_item.widget()
-                            if hasattr(next_widget, 'feature') and next_widget.isVisible():
-                                has_visible_after = True
-                                break
-                            elif isinstance(next_widget, QLabel) and next_widget.text().startswith("📁"):
-                                break
-                    
-                    # 只有前后都有可见卡片时才显示间距
-                    widget.setVisible(has_visible_before and has_visible_after)
+                        widget.set_visible(False)
 
     def toggle_select_all(self):
         """切换全选/取消全选"""
@@ -553,10 +493,14 @@ class MainWindow(QMainWindow):
             item = self.feature_cards_layout.itemAt(i)
             if item and item.widget():
                 widget = item.widget()
-                # 只检查功能卡片，跳过分组标题和间距
-                if hasattr(widget, 'feature') and widget.isVisible():
-                    if hasattr(widget, 'is_selected') and not widget.is_selected:
-                        all_selected = False
+                # 只检查分组卡片中的功能卡片
+                if hasattr(widget, 'group_name'):
+                    feature_cards = widget.get_feature_cards()
+                    for card in feature_cards:
+                        if hasattr(card, 'is_selected') and not card.is_selected:
+                            all_selected = False
+                            break
+                    if not all_selected:
                         break
 
         # 根据当前状态切换
@@ -564,10 +508,12 @@ class MainWindow(QMainWindow):
             item = self.feature_cards_layout.itemAt(i)
             if item and item.widget():
                 widget = item.widget()
-                # 只处理功能卡片，跳过分组标题和间距
-                if hasattr(widget, 'feature') and widget.isVisible():
-                    if hasattr(widget, 'set_selected'):
-                        widget.set_selected(not all_selected)
+                # 只处理分组卡片中的功能卡片
+                if hasattr(widget, 'group_name'):
+                    feature_cards = widget.get_feature_cards()
+                    for card in feature_cards:
+                        if hasattr(card, 'set_selected'):
+                            card.set_selected(not all_selected)
 
         # 更新按钮文本和状态
         self.batch_select_btn.setText("取消全选" if not all_selected else "全选")
@@ -581,10 +527,15 @@ class MainWindow(QMainWindow):
             item = self.feature_cards_layout.itemAt(i)
             if item and item.widget():
                 widget = item.widget()
-                # 只检查功能卡片，跳过分组标题和间距
-                if hasattr(widget, 'feature') and hasattr(widget, 'isVisible') and widget.is_selected and widget.isVisible():
-                    has_selection = True
-                    break
+                # 只检查分组卡片中的功能卡片
+                if hasattr(widget, 'group_name'):
+                    feature_cards = widget.get_feature_cards()
+                    for card in feature_cards:
+                        if hasattr(card, 'is_selected') and hasattr(card, 'isVisible') and card.is_selected and card.isVisible():
+                            has_selection = True
+                            break
+                    if has_selection:
+                        break
 
         # 更新按钮状态
         self.batch_delete_btn.setEnabled(has_selection)
@@ -598,9 +549,12 @@ class MainWindow(QMainWindow):
             item = self.feature_cards_layout.itemAt(i)
             if item and item.widget():
                 widget = item.widget()
-                # 只检查功能卡片，跳过分组标题和间距
-                if hasattr(widget, 'feature') and hasattr(widget, 'index') and hasattr(widget, 'isVisible') and widget.is_selected and widget.isVisible():
-                    selected_indices.append(widget.index)
+                # 只检查分组卡片中的功能卡片
+                if hasattr(widget, 'group_name'):
+                    feature_cards = widget.get_feature_cards()
+                    for card in feature_cards:
+                        if hasattr(card, 'is_selected') and hasattr(card, 'index') and hasattr(card, 'isVisible') and card.is_selected and card.isVisible():
+                            selected_indices.append(card.index)
 
         if not selected_indices:
             return

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-from typing import Optional, Union
+from typing import Optional, Union, List
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
     QListWidget, QListWidgetItem, QCheckBox, QSpinBox, QDoubleSpinBox
@@ -228,7 +228,7 @@ class FeatureCard(QWidget):
         repeat_layout.addWidget(QLabel("执行次数:"))
         self.repeat_count = QSpinBox()
         self.repeat_count.setMinimum(1)
-        self.repeat_count.setMaximum(99999)  # 限制最大值为99999，避免过大值导致问题
+        self.repeat_count.setMaximum(99999999)  # 限制最大值为99999，避免过大值导致问题
         self.repeat_count.setValue(1)
         self.repeat_count.setFixedWidth(80)
         self.repeat_count.setToolTip("设置功能执行的次数")
@@ -241,7 +241,7 @@ class FeatureCard(QWidget):
         interval_layout.addWidget(QLabel("间隔时间:"))
         self.repeat_interval = QDoubleSpinBox()
         self.repeat_interval.setMinimum(0.0)
-        self.repeat_interval.setMaximum(999999.0)
+        self.repeat_interval.setMaximum(99999999.0)
         self.repeat_interval.setValue(1.0)
         self.repeat_interval.setDecimals(1)
         self.repeat_interval.setSuffix(" 秒")
@@ -510,3 +510,206 @@ class FeatureCard(QWidget):
                 self.pause_btn.setText("恢复")
             elif self.status == "暂停":
                 self.pause_btn.setText("暂停") 
+
+
+class GroupCard(QWidget):
+    """分组卡片组件"""
+
+    def __init__(self, group_name: str, features: List[tuple], parent=None):
+        super().__init__(parent)
+        self.group_name = group_name
+        self.features = features  # [(index, feature), ...]
+        self.parent = parent
+        self.is_collapsed = False
+        
+        # UI组件
+        self.header_widget: Optional[QWidget] = None
+        self.content_widget: Optional[QWidget] = None
+        self.toggle_button: Optional[QPushButton] = None
+        self.group_label: Optional[QLabel] = None
+        self.count_label: Optional[QLabel] = None
+        self.feature_cards_layout: Optional[QVBoxLayout] = None
+        
+        self.init_ui()
+
+    def init_ui(self):
+        """初始化UI"""
+        # 设置卡片样式
+        self.setObjectName("groupCard")
+        self.setStyleSheet("""
+            QWidget#groupCard {
+                background-color: white;
+                border: 1px solid #e0e0e0;
+                border-radius: 8px;
+                margin: 8px 0px;
+            }
+            QWidget#groupCard:hover {
+                border-color: #007bff;
+                box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+            }
+        """)
+
+        # 主布局
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setSpacing(0)
+
+        # 创建头部（可点击）
+        self.create_header()
+        main_layout.addWidget(self.header_widget)
+
+        # 创建内容区域
+        self.create_content()
+        main_layout.addWidget(self.content_widget)
+
+    def create_header(self):
+        """创建分组头部"""
+        self.header_widget = QWidget()
+        self.header_widget.setObjectName("groupHeader")
+        self.header_widget.setStyleSheet("""
+            QWidget#groupHeader {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #f8f9fa, stop:1 #e9ecef);
+                border-bottom: 1px solid #dee2e6;
+                border-radius: 8px 8px 0px 0px;
+                padding: 12px;
+            }
+            QWidget#groupHeader:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 #e3f2fd, stop:1 #bbdefb);
+            }
+        """)
+        self.header_widget.setFixedHeight(60)
+        self.header_widget.mousePressEvent = self.on_header_clicked
+
+        header_layout = QHBoxLayout(self.header_widget)
+        header_layout.setContentsMargins(12, 8, 12, 8)
+
+        # 折叠/展开按钮
+        self.toggle_button = QPushButton("▼")
+        self.toggle_button.setObjectName("groupToggleBtn")
+        self.toggle_button.setFixedSize(24, 24)
+        self.toggle_button.setStyleSheet("""
+            QPushButton#groupToggleBtn {
+                background-color: transparent;
+                border: none;
+                color: #495057;
+                font-size: 12px;
+                font-weight: bold;
+                border-radius: 12px;
+            }
+            QPushButton#groupToggleBtn:hover {
+                background-color: #007bff;
+                color: white;
+            }
+        """)
+        self.toggle_button.clicked.connect(self.toggle_collapse)
+        header_layout.addWidget(self.toggle_button)
+
+        # 分组图标和名称
+        icon_label = QLabel("📁")
+        icon_label.setStyleSheet("font-size: 18px; margin-right: 8px;")
+        header_layout.addWidget(icon_label)
+
+        self.group_label = QLabel(self.group_name)
+        self.group_label.setStyleSheet("""
+            font-size: 16px;
+            font-weight: bold;
+            color: #212529;
+        """)
+        header_layout.addWidget(self.group_label)
+
+        header_layout.addStretch()
+
+        # 功能数量
+        self.count_label = QLabel(f"{len(self.features)} 个功能")
+        self.count_label.setStyleSheet("""
+            color: #6c757d;
+            font-size: 12px;
+            padding: 4px 8px;
+            background-color: #e9ecef;
+            border-radius: 12px;
+        """)
+        header_layout.addWidget(self.count_label)
+
+    def create_content(self):
+        """创建内容区域"""
+        self.content_widget = QWidget()
+        self.content_widget.setObjectName("groupContent")
+        self.content_widget.setStyleSheet("""
+            QWidget#groupContent {
+                background-color: #fafafa;
+                border-radius: 0px 0px 8px 8px;
+                padding: 8px;
+            }
+        """)
+
+        # 内容布局
+        content_layout = QVBoxLayout(self.content_widget)
+        content_layout.setContentsMargins(8, 8, 8, 8)
+        content_layout.setSpacing(6)
+
+        # 功能卡片容器
+        self.feature_cards_layout = QVBoxLayout()
+        self.feature_cards_layout.setSpacing(4)
+
+        # 添加功能卡片
+        for index, feature in self.features:
+            card = FeatureCard(feature, index, self.parent)
+            self.feature_cards_layout.addWidget(card)
+
+        content_layout.addLayout(self.feature_cards_layout)
+
+    def toggle_collapse(self):
+        """切换折叠/展开状态"""
+        self.is_collapsed = not self.is_collapsed
+        
+        if self.is_collapsed:
+            self.content_widget.hide()
+            self.toggle_button.setText("▶")
+            self.header_widget.setStyleSheet("""
+                QWidget#groupHeader {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #f8f9fa, stop:1 #e9ecef);
+                    border: 1px solid #dee2e6;
+                    border-radius: 8px;
+                    padding: 12px;
+                }
+                QWidget#groupHeader:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #e3f2fd, stop:1 #bbdefb);
+                }
+            """)
+        else:
+            self.content_widget.show()
+            self.toggle_button.setText("▼")
+            self.header_widget.setStyleSheet("""
+                QWidget#groupHeader {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #f8f9fa, stop:1 #e9ecef);
+                    border-bottom: 1px solid #dee2e6;
+                    border-radius: 8px 8px 0px 0px;
+                    padding: 12px;
+                }
+                QWidget#groupHeader:hover {
+                    background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                        stop:0 #e3f2fd, stop:1 #bbdefb);
+                }
+            """)
+
+    def on_header_clicked(self, event):
+        """头部点击事件"""
+        self.toggle_collapse()
+
+    def set_visible(self, visible: bool):
+        """设置整个分组卡片的可见性"""
+        self.setVisible(visible)
+
+    def get_feature_cards(self) -> List['FeatureCard']:
+        """获取所有功能卡片"""
+        cards = []
+        for i in range(self.feature_cards_layout.count()):
+            item = self.feature_cards_layout.itemAt(i)
+            if item and item.widget():
+                cards.append(item.widget())
+        return cards 

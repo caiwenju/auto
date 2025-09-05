@@ -293,7 +293,7 @@ class StepEditDialog(QDialog):
         click_count_layout = QHBoxLayout()
         click_count_layout.addWidget(QLabel("点击次数:"))
         self.click_count_spinbox = QSpinBox()
-        self.click_count_spinbox.setRange(1, 99999)  # 限制最大值避免内存问题
+        self.click_count_spinbox.setRange(1, 99999999)  # 限制最大值避免内存问题
         self.click_count_spinbox.setValue(
             self.step.click_count if self.step and hasattr(
                 self.step, 'click_count') else 1)  # 默认1次

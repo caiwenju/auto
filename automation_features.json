@@ -8,7 +8,7 @@
         "action": "左键单击",
         "delay": 1.0,
         "text": "",
-        "click_count": 1,
+        "click_count": 2,
         "click_interval": 0.05,
         "name": ""
       },
