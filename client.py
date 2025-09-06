@@ -2,6 +2,8 @@
 # -*- coding: utf-8 -*-
 
 import json
+import os
+import sys
 from typing import Optional
 from PySide6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QSplitter,
@@ -25,6 +27,18 @@ try:
 except ImportError:
     SECURITY_ENABLED = False
     DEVELOPMENT_MODE = True
+
+
+def get_resource_path(relative_path):
+    """获取资源文件的绝对路径，支持开发环境和打包环境"""
+    try:
+        # PyInstaller会创建临时文件夹并存储路径在_MEIPASS中
+        base_path = sys._MEIPASS
+    except Exception:
+        # 开发环境，使用脚本所在目录
+        base_path = os.path.abspath(".")
+    
+    return os.path.join(base_path, relative_path)
 
 
 class WindowManager:
@@ -330,7 +344,23 @@ class FeatureGroupViewer(QMainWindow):
         
         # 设置窗口图标
         from PySide6.QtGui import QIcon
-        self.setWindowIcon(QIcon("C.ico"))
+        try:
+            # client.py 专用 C.ico
+            icon_path = None
+            try:
+                test_path = get_resource_path("C.ico")
+                if os.path.exists(test_path):
+                    icon_path = test_path
+            except:
+                pass
+            
+            if icon_path:
+                self.setWindowIcon(QIcon(icon_path))
+                print(f"✓ 客户端窗口图标设置成功: {icon_path}")
+            else:
+                print("⚠ 未找到 C.ico 图标文件，使用默认图标")
+        except Exception as e:
+            print(f"设置客户端窗口图标失败: {e}")
         
         # 设置窗口样式
         self.setStyleSheet("""

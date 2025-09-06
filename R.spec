@@ -5,7 +5,7 @@ a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('automation_features.json', '.')],
+    datas=[('automation_features.json', '.'), ('R.ico', '.'), ('C.ico', '.')],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

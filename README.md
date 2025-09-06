@@ -1,8 +1,55 @@
-main.py 打包：
 
-pyinstaller --onefile --noconsole --icon=R.ico --name R --add-data "automation_features.json;." --clean main.py
 
 # 自动化操作工具
+
+## 打包命令
+
+### 方法一：使用命令行（推荐）
+```bash
+pyinstaller --onefile --noconsole --icon=R.ico --name R --add-data "automation_features.json;." --add-data "R.ico;." --add-data "C.ico;." --clean main.py
+```
+
+### 方法二：使用 spec 文件
+```bash
+pyinstaller R.spec
+```
+
+## 说明
+
+- **R.ico**: main.py 程序的图标（主程序和系统托盘）
+- **C.ico**: client.py 程序的图标（客户端窗口）
+- **automation_features.json**: 功能配置文件
+
+## 图标文件要求
+
+- 格式：.ico
+- 建议包含多种尺寸：16x16, 32x32, 48x48, 256x256
+- 文件大小：建议小于 100KB
+
+## 注意事项
+
+1. 确保 R.ico 和 C.ico 文件存在于项目根目录
+2. 如果使用 spec 文件打包，图标文件会自动包含
+3. 如果使用命令行打包，需要手动添加 `--add-data` 参数包含图标文件
+4. 打包后的程序会自动使用正确的图标文件
+
+## 常见问题
+
+### Q: 为什么需要同时包含两个图标文件？
+A: 
+- main.py 是主程序，使用 R.ico
+- client.py 是客户端程序，使用 C.ico
+- 两个程序可能会同时运行，需要区分
+
+### Q: 可以只使用一个图标文件吗？
+A: 可以，但建议保持区分以便用户识别不同的程序窗口
+
+### Q: 打包后图标不显示怎么办？
+A: 
+1. 确认图标文件已包含在打包命令中
+2. 检查图标文件格式是否正确
+3. 查看控制台输出的图标加载信息
+
 将执行次数最大值从 2147483647 降低到 99999
 将点击间隔最大值从 999999秒 降低到 60秒
 将延迟最大值从 999999秒 降低到 60秒

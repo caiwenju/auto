@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import sys
+import os
 import time
 import json
 from typing import Optional
@@ -20,7 +21,7 @@ import win32con
 # 导入自定义模块
 from window_manager import WindowManager
 from coordinate_capture import CoordinateCapture
-from automation import AutomationStep, AutomationFeature, FeatureGroup, FeatureManager, AutomationExecutor
+from automation import AutomationStep, AutomationFeature, FeatureGroup, FeatureManager, AutomationExecutor, get_resource_path
 from ui_components import StepListWidget, FeatureCardWidget, GroupCard
 from dialogs import FeatureDialog, StepEditDialog, GroupDialog
 
@@ -1395,12 +1396,19 @@ class MainWindow(QMainWindow):
             
             # 设置托盘图标
             try:
-                icon = QIcon("R.ico")
-                if not icon.isNull():
-                    self.tray_icon.setIcon(icon)
+                # main.py 托盘图标专用 R.ico
+                icon_file = "R.ico"
+                icon_path = get_resource_path(icon_file)
+                if icon_path:
+                    icon = QIcon(icon_path)
+                    if not icon.isNull():
+                        self.tray_icon.setIcon(icon)
+                        print(f"✓ 托盘图标设置成功: {icon_path}")
+                    else:
+                        raise Exception("图标加载失败")
                 else:
-                    # 如果图标文件不存在，使用默认图标
-                    self.tray_icon.setIcon(self.style().standardIcon(self.style().StandardPixmap.SP_ComputerIcon))
+                    raise Exception("未找到图标文件")
+                    
             except Exception as e:
                 print(f"设置托盘图标失败: {e}")
                 # 使用默认图标
@@ -2028,8 +2036,24 @@ def main():
     app.setApplicationName("dao")
     app.setApplicationVersion("1.0")
 
-    # 设置应用程序图标（如果有的话）
-    app.setWindowIcon(QIcon("R.ico"))   
+    # 设置应用程序图标
+    try:
+        # main.py 专用 R.ico
+        icon_path = None
+        try:
+            test_path = get_resource_path("R.ico")
+            if os.path.exists(test_path):
+                icon_path = test_path
+        except:
+            pass
+        
+        if icon_path:
+            app.setWindowIcon(QIcon(icon_path))
+            print(f"✓ 应用程序图标设置成功: {icon_path}")
+        else:
+            print("⚠ 未找到 R.ico 图标文件，使用默认图标")
+    except Exception as e:
+        print(f"设置应用程序图标失败: {e}")   
 
     window = MainWindow()
     window.show()
