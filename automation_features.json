@@ -1,86 +1,102 @@
-[
-  {
-    "name": "开",
-    "steps": [
-      {
-        "x": 0.1646,
-        "y": 0.27449999999999997,
-        "action": "左键单击",
-        "delay": 1.0,
-        "text": "",
-        "click_count": 2,
-        "click_interval": 0.05,
-        "name": ""
-      },
-      {
-        "x": 0.1641,
-        "y": 0.27940000000000004,
-        "action": "输入文本",
-        "delay": 1.0,
-        "text": "kb",
-        "click_count": 1,
-        "click_interval": 0.05,
-        "name": ""
-      },
-      {
-        "x": 0.2089,
-        "y": 0.27940000000000004,
-        "action": "左键单击",
-        "delay": 0.0,
-        "text": "",
-        "click_count": 1,
-        "click_interval": 0.05,
-        "name": ""
-      }
-    ],
-    "group": "默认"
-  },
-  {
-    "name": "测试功能1",
-    "steps": [
-      {
-        "x": 0.5,
-        "y": 0.5,
-        "action": "左键单击",
-        "delay": 0.5,
-        "text": "",
-        "click_count": 1,
-        "click_interval": 0.05,
-        "name": "点击中心"
-      }
-    ],
-    "group": "测试分组"
-  },
-  {
-    "name": "测试功能2",
-    "steps": [
-      {
-        "x": 0.3,
-        "y": 0.3,
-        "action": "输入文本",
-        "delay": 0.0,
-        "text": "Hello World",
-        "click_count": 1,
-        "click_interval": 0.05,
-        "name": "输入文本"
-      }
-    ],
-    "group": "测试分组"
-  },
-  {
-    "name": "系统功能",
-    "steps": [
-      {
-        "x": 0.1,
-        "y": 0.1,
-        "action": "右键单击",
-        "delay": 1.0,
-        "text": "",
-        "click_count": 1,
-        "click_interval": 0.05,
-        "name": "右键菜单"
-      }
-    ],
-    "group": "系统工具"
-  }
-]
+{
+  "groups": [
+    {
+      "group_name": "默认",
+      "features": [
+        {
+          "name": "开",
+          "steps": [
+            {
+              "x": 0.1646,
+              "y": 0.27449999999999997,
+              "action": "左键单击",
+              "delay": 1.0,
+              "text": "",
+              "click_count": 2,
+              "click_interval": 0.05,
+              "name": ""
+            },
+            {
+              "x": 0.1641,
+              "y": 0.27940000000000004,
+              "action": "输入文本",
+              "delay": 1.0,
+              "text": "kb",
+              "click_count": 1,
+              "click_interval": 0.05,
+              "name": ""
+            },
+            {
+              "x": 0.2089,
+              "y": 0.27940000000000004,
+              "action": "左键单击",
+              "delay": 0.0,
+              "text": "",
+              "click_count": 1,
+              "click_interval": 0.05,
+              "name": ""
+            }
+          ]
+        },
+        {
+          "name": "测试功能2",
+          "steps": [
+            {
+              "x": 0.3,
+              "y": 0.3,
+              "action": "输入文本",
+              "delay": 0.0,
+              "text": "Hello World",
+              "click_count": 1,
+              "click_interval": 0.05,
+              "name": "输入文本"
+            }
+          ]
+        },
+        {
+          "name": "测试功能1",
+          "steps": [
+            {
+              "x": 0.5,
+              "y": 0.5,
+              "action": "左键单击",
+              "delay": 0.5,
+              "text": "",
+              "click_count": 1,
+              "click_interval": 0.05,
+              "name": "点击中心"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "group_name": "系统工具",
+      "features": [
+        {
+          "name": "系统功能",
+          "steps": [
+            {
+              "x": 0.1,
+              "y": 0.1,
+              "action": "右键单击",
+              "delay": 1.0,
+              "text": "",
+              "click_count": 1,
+              "click_interval": 0.05,
+              "name": "右键菜单"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "group_name": "问道",
+      "features": []
+    },
+    {
+      "group_name": "测试",
+      "features": []
+    }
+  ]
+}

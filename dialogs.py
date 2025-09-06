@@ -16,9 +16,9 @@ from ui_components import StepListWidget
 class FeatureDialog(QDialog):
     """功能编辑对话框"""
 
-    def __init__(self, parent=None, feature: AutomationFeature = None):
+    def __init__(self, parent=None, feature = None):
         super().__init__(parent)
-        self.feature: AutomationFeature = feature
+        self.feature = feature
         self.steps: List[AutomationStep] = (
             feature.steps.copy() if feature else [])
 
@@ -191,9 +191,16 @@ class FeatureDialog(QDialog):
         except Exception as e:
             print(f"Update steps order error: {e}")
 
-    def get_feature(self) -> AutomationFeature:
+    def get_feature(self):
         """获取编辑后的功能"""
-        return AutomationFeature(
+        # 返回一个包含功能和分组信息的对象
+        class FeatureData:
+            def __init__(self, name, steps, group):
+                self.name = name
+                self.steps = steps
+                self.group = group
+        
+        return FeatureData(
             name=self.name_edit.text(),
             steps=self.steps,
             group=self.group_combo.currentText()
@@ -412,3 +419,116 @@ class StepEditDialog(QDialog):
         self.raise_()
         self.activateWindow()
         self.setFocus() 
+
+class GroupDialog(QDialog):
+    """分组编辑对话框"""
+
+    def __init__(self, parent=None, group_name: str = ""):
+        super().__init__(parent)
+        self.group_name = group_name
+
+        # UI组件
+        self.name_edit: Optional[QLineEdit] = None
+        self.ok_button: Optional[QPushButton] = None
+        self.cancel_button: Optional[QPushButton] = None
+
+        # 设置窗口标志
+        self.setWindowFlags(
+            Qt.WindowType.Dialog |
+            Qt.WindowType.WindowStaysOnTopHint |
+            Qt.WindowType.MSWindowsFixedSizeDialogHint
+        )
+
+        self.init_ui()
+
+    def init_ui(self):
+        """初始化UI"""
+        self.setWindowTitle("新增分组" if not self.group_name else "编辑分组")
+        self.setModal(True)
+        self.resize(350, 150)
+
+        layout = QVBoxLayout(self)
+        layout.setSpacing(15)
+        layout.setContentsMargins(20, 20, 20, 20)
+
+        # 分组名称输入
+        name_layout = QHBoxLayout()
+        name_layout.addWidget(QLabel("分组名称:"))
+        self.name_edit = QLineEdit()
+        self.name_edit.setFixedHeight(32)
+        self.name_edit.setPlaceholderText("请输入分组名称")
+        if self.group_name:
+            self.name_edit.setText(self.group_name)
+        name_layout.addWidget(self.name_edit)
+        layout.addLayout(name_layout)
+
+        # 按钮区域
+        button_layout = QHBoxLayout()
+        button_layout.addStretch()
+
+        self.ok_button = QPushButton("确定")
+        self.ok_button.setFixedHeight(36)
+        self.ok_button.setFixedWidth(80)
+        self.ok_button.setObjectName("groupOkBtn")
+        self.ok_button.setStyleSheet("""
+            QPushButton#groupOkBtn {
+                background-color: #28a745 !important;
+                border: none !important;
+                color: white !important;
+                font-size: 13px !important;
+                padding: 8px 16px !important;
+                border-radius: 6px !important;
+            }
+            QPushButton#groupOkBtn:hover {
+                background-color: #218838 !important;
+            }
+        """)
+        self.ok_button.clicked.connect(self.accept)
+
+        self.cancel_button = QPushButton("取消")
+        self.cancel_button.setFixedHeight(36)
+        self.cancel_button.setFixedWidth(80)
+        self.cancel_button.setObjectName("groupCancelBtn")
+        self.cancel_button.setStyleSheet("""
+            QPushButton#groupCancelBtn {
+                background-color: #6c757d !important;
+                border: none !important;
+                color: white !important;
+                font-size: 13px !important;
+                padding: 8px 16px !important;
+                border-radius: 6px !important;
+            }
+            QPushButton#groupCancelBtn:hover {
+                background-color: #5a6268 !important;
+            }
+        """)
+        self.cancel_button.clicked.connect(self.reject)
+
+        button_layout.addWidget(self.ok_button)
+        button_layout.addWidget(self.cancel_button)
+        layout.addLayout(button_layout)
+
+        # 设置焦点到输入框
+        self.name_edit.setFocus()
+
+    def get_group_name(self) -> str:
+        """获取分组名称"""
+        return self.name_edit.text().strip()
+
+    def keyPressEvent(self, event):
+        """重写按键事件，ESC键相当于取消，回车键相当于确定"""
+        if event.key() == Qt.Key.Key_Escape:
+            self.reject()
+        elif event.key() == Qt.Key.Key_Return or event.key() == Qt.Key.Key_Enter:
+            if self.get_group_name():  # 只有输入了名称才能确定
+                self.accept()
+        else:
+            super().keyPressEvent(event)
+
+    def showEvent(self, event):
+        """重写显示事件，确保窗口置顶并选中文本"""
+        super().showEvent(event)
+        self.raise_()
+        self.activateWindow()
+        self.name_edit.setFocus()
+        self.name_edit.selectAll() 

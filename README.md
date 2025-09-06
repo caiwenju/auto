@@ -1,3 +1,7 @@
+main.py 打包：
+
+pyinstaller --onefile --noconsole --icon=R.ico --name R --add-data "automation_features.json;." --clean main.py
+
 # 自动化操作工具
 将执行次数最大值从 2147483647 降低到 99999
 将点击间隔最大值从 999999秒 降低到 60秒
@@ -32,3 +36,9 @@
 - 支持单步调试
 
 在写一个独立的py，会读取@automation_features.json 中的数据，界面的样子是跟功能管理中一个罗列出每个功能，但是只有执行和停止、编辑功能名字功能，展示方式你是个专业设计师，你需要考虑功能多了的情况
+
+pyinstaller --onefile --noconsole \
+  --icon=R.ico --name R \
+  --add-data "automation_features.json:." \
+  --clean \
+  main.py      

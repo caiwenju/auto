@@ -152,7 +152,8 @@ class FeatureCard(QWidget):
         super().__init__()
         self.feature: AutomationFeature = feature
         self.index: int = index
-        self.parent = parent
+        self.parent = parent  # 这是MainWindow的引用
+        self.parent_card = None  # 用于存储GroupCard的引用
         self.status: str = "停止"  # 默认状态：停止、运行中、暂停、错误
         self.is_selected: bool = False
         self.is_hovered: bool = False
@@ -184,7 +185,8 @@ class FeatureCard(QWidget):
         # 选择框
         self.checkbox = QCheckBox()
         self.checkbox.setFixedSize(20, 20)
-        self.checkbox.stateChanged.connect(self.on_checkbox_changed)
+        # 使用lambda函数正确传递参数
+        self.checkbox.stateChanged.connect(lambda state: self.on_checkbox_changed(state))
         top_layout.addWidget(self.checkbox)
 
         # 功能名称
@@ -257,14 +259,15 @@ class FeatureCard(QWidget):
         # 执行按钮
         self.run_btn = QPushButton("执行")
         self.run_btn.setObjectName("cardRunBtn")
-        self.run_btn.setFixedSize(60, 28)
+        self.run_btn.setFixedSize(60, 32)  # 增加高度从28到32
         self.run_btn.setStyleSheet("""
             QPushButton#cardRunBtn {
                 background-color: #007bff;
                 color: white;
                 border: none;
                 border-radius: 4px;
-                font-size: 12px;
+                font-size: 13px;
+                font-weight: 500;
             }
             QPushButton#cardRunBtn:hover {
                 background-color: #0069d9;
@@ -281,14 +284,15 @@ class FeatureCard(QWidget):
         # 暂停按钮
         self.pause_btn = QPushButton("暂停")
         self.pause_btn.setObjectName("cardPauseBtn")
-        self.pause_btn.setFixedSize(60, 28)
+        self.pause_btn.setFixedSize(60, 32)  # 增加高度从28到32
         self.pause_btn.setStyleSheet("""
             QPushButton#cardPauseBtn {
                 background-color: #ffc107;
                 color: #212529;
                 border: none;
                 border-radius: 4px;
-                font-size: 12px;
+                font-size: 13px;
+                font-weight: 500;
             }
             QPushButton#cardPauseBtn:hover {
                 background-color: #e0a800;
@@ -304,14 +308,15 @@ class FeatureCard(QWidget):
         # 停止按钮
         self.stop_btn = QPushButton("停止")
         self.stop_btn.setObjectName("cardStopBtn")
-        self.stop_btn.setFixedSize(60, 28)
+        self.stop_btn.setFixedSize(60, 32)  # 增加高度从28到32
         self.stop_btn.setStyleSheet("""
             QPushButton#cardStopBtn {
                 background-color: #dc3545;
                 color: white;
                 border: none;
                 border-radius: 4px;
-                font-size: 12px;
+                font-size: 13px;
+                font-weight: 500;
             }
             QPushButton#cardStopBtn:hover {
                 background-color: #c82333;
@@ -334,14 +339,15 @@ class FeatureCard(QWidget):
         # 编辑按钮
         self.edit_btn = QPushButton("编辑")
         self.edit_btn.setObjectName("cardEditBtn")
-        self.edit_btn.setFixedSize(60, 28)
+        self.edit_btn.setFixedSize(60, 32)  # 增加高度从28到32
         self.edit_btn.setStyleSheet("""
             QPushButton#cardEditBtn {
                 background-color: #6c757d;
                 color: white;
                 border: none;
                 border-radius: 4px;
-                font-size: 12px;
+                font-size: 13px;
+                font-weight: 500;
             }
             QPushButton#cardEditBtn:hover {
                 background-color: #5a6268;
@@ -358,14 +364,15 @@ class FeatureCard(QWidget):
         # 删除按钮
         self.delete_btn = QPushButton("删除")
         self.delete_btn.setObjectName("cardDeleteBtn")
-        self.delete_btn.setFixedSize(60, 28)
+        self.delete_btn.setFixedSize(60, 32)  # 增加高度从28到32
         self.delete_btn.setStyleSheet("""
             QPushButton#cardDeleteBtn {
                 background-color: #dc3545;
                 color: white;
                 border: none;
                 border-radius: 4px;
-                font-size: 12px;
+                font-size: 13px;
+                font-weight: 500;
             }
             QPushButton#cardDeleteBtn:hover {
                 background-color: #c82333;
@@ -380,9 +387,6 @@ class FeatureCard(QWidget):
         button_layout.addWidget(self.delete_btn)
 
         main_layout.addLayout(button_layout)
-
-        # 添加鼠标点击事件
-        self.mousePressEvent = self.on_card_clicked
 
         # 安装事件过滤器处理悬停
         self.installEventFilter(self)
@@ -439,19 +443,13 @@ class FeatureCard(QWidget):
                     }
                 """)
 
-    def on_card_clicked(self, event):
-        """卡片点击事件处理"""
-        # 切换选中状态
-        self.set_selected(not self.is_selected)
-        # 更新批量按钮状态
-        self._call_parent_method('update_batch_buttons_state')
-
     def on_checkbox_changed(self, state):
         """复选框状态变化处理"""
-        self.is_selected = (state == Qt.CheckState.Checked)
+        # Qt.CheckState有三种状态：Unchecked(0), PartiallyChecked(1), Checked(2)
+        self.is_selected = (state == 2)
         self.update_card_style()
-        # 更新批量按钮状态
-        self._call_parent_method('update_batch_buttons_state')
+        # 更新全局选择状态
+        self._call_parent_method('update_feature_selection_state', self.index, self.is_selected)
 
     def set_status(self, status: str):
         """设置功能状态"""
@@ -491,16 +489,31 @@ class FeatureCard(QWidget):
     def set_selected(self, selected: bool):
         """设置选中状态"""
         self.is_selected = selected
+        # 断开信号连接，避免触发on_checkbox_changed
+        self.checkbox.blockSignals(True)
         self.checkbox.setChecked(selected)
+        self.checkbox.blockSignals(False)
         self.update_card_style()
+        # 确保更新批量按钮状态
+        self._call_parent_method('update_batch_buttons_state')
 
     def _call_parent_method(self, method_name: str, *args):
         """安全调用父组件方法"""
+        # 首先尝试直接调用MainWindow的方法
         if self.parent and hasattr(self.parent, method_name):
             method = getattr(self.parent, method_name)
             if callable(method):
                 method(*args)
-
+                return
+                
+        # 如果直接调用失败，尝试通过Qt的parent()方法获取父组件
+        qt_parent = self.parent()
+        if qt_parent and hasattr(qt_parent, method_name):
+            method = getattr(qt_parent, method_name)
+            if callable(method):
+                method(*args)
+                return
+                
     def on_pause_btn_clicked(self):
         """暂停按钮点击处理"""
         if self.parent and hasattr(self.parent, 'pause_feature'):
@@ -656,6 +669,7 @@ class GroupCard(QWidget):
         # 添加功能卡片
         for index, feature in self.features:
             card = FeatureCard(feature, index, self.parent)
+            card.setParent(self.content_widget)  # 设置Qt的父子关系
             self.feature_cards_layout.addWidget(card)
 
         content_layout.addLayout(self.feature_cards_layout)
@@ -712,4 +726,10 @@ class GroupCard(QWidget):
             item = self.feature_cards_layout.itemAt(i)
             if item and item.widget():
                 cards.append(item.widget())
-        return cards 
+        return cards
+        
+    # 添加方法转发
+    def update_batch_buttons_state(self):
+        """转发更新批量按钮状态的请求到父窗口"""
+        if self.parent and hasattr(self.parent, 'update_batch_buttons_state'):
+            self.parent.update_batch_buttons_state() 

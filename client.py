@@ -10,7 +10,171 @@ from PySide6.QtWidgets import (
     QComboBox, QMessageBox, QSpinBox, QDoubleSpinBox
 )
 from PySide6.QtCore import Qt, QTimer
-from window_manager import WindowManager
+from typing import List, Dict, Tuple, Optional
+import win32gui
+import win32con
+from PySide6.QtWidgets import QApplication, QLabel
+from PySide6.QtCore import Qt
+
+# 导入安全模块
+try:
+    import security_utils
+    SECURITY_ENABLED = True
+    # 开发模式：设置为False可以禁用安全检查便于调试
+    DEVELOPMENT_MODE = False
+except ImportError:
+    SECURITY_ENABLED = False
+    DEVELOPMENT_MODE = True
+
+
+class WindowManager:
+    """窗口管理器"""
+
+    def __init__(self):
+        self.bound_window: Optional[Dict] = None
+        self.window_handle: Optional[int] = None
+        self.window_rect: Optional[Tuple[int, int, int, int]] = None
+        self.client_rect: Optional[Tuple[int, int, int, int]] = None
+
+    def get_window_list(self) -> List[Dict]:
+        """获取所有可见窗口列表"""
+        windows = []
+
+        def enum_windows_callback(hwnd, windows):
+            if win32gui.IsWindowVisible(hwnd):
+                window_text = win32gui.GetWindowText(hwnd)
+                if window_text:  # 只显示有标题的窗口
+                    class_name = win32gui.GetClassName(hwnd)
+                    rect = win32gui.GetWindowRect(hwnd)
+                    windows.append({
+                        'handle': hwnd,
+                        'title': window_text,
+                        'class': class_name,
+                        'rect': rect
+                    })
+
+        win32gui.EnumWindows(enum_windows_callback, windows)
+        return windows
+
+    def bind_window(self, window_handle: int) -> bool:
+        """绑定窗口"""
+        try:
+            if win32gui.IsWindow(window_handle):
+                self.window_handle = window_handle
+                self.update_window_rect()
+                self.bound_window = {
+                    'handle': window_handle,
+                    'title': win32gui.GetWindowText(window_handle),
+                    'rect': self.window_rect,
+                    'client_rect': self.client_rect
+                }
+
+                # 设置主窗口在绑定窗口之上
+                self.set_main_window_above_bound_window()
+
+                return True
+        except Exception as e:
+            print(f"绑定窗口失败: {e}")
+        return False
+
+    def set_main_window_above_bound_window(self):
+        """设置绑定窗口在主窗口之下"""
+        try:
+            if self.window_handle and hasattr(self, 'winId'):
+                # 获取主窗口句柄
+                main_hwnd = self.winId()
+                if main_hwnd:
+                    # 直接将绑定窗口设置在主窗口之下
+                    win32gui.SetWindowPos(
+                        self.window_handle,  # 绑定窗口
+                        main_hwnd,  # 主窗口句柄（作为参考窗口）
+                        0, 0, 0, 0,  # 位置和大小保持不变
+                        win32con.SWP_NOMOVE | win32con.SWP_NOSIZE | win32con.SWP_NOACTIVATE
+                    )
+                    print("绑定窗口已设置在主窗口之下")
+        except Exception as e:
+            print(f"设置窗口层级失败: {e}")
+
+    def update_window_rect(self):
+        """更新窗口位置信息"""
+        if self.window_handle:
+            # 获取窗口整体位置
+            self.window_rect = win32gui.GetWindowRect(self.window_handle)
+            # 获取客户区位置
+            left, top, right, bottom = win32gui.GetClientRect(
+                self.window_handle)
+            client_left, client_top = win32gui.ClientToScreen(
+                self.window_handle, (left, top))
+            client_right, client_bottom = win32gui.ClientToScreen(
+                self.window_handle, (right, bottom))
+            self.client_rect = (
+                client_left,
+                client_top,
+                client_right,
+                client_bottom)
+
+    def activate_window(self):
+        """激活并置顶窗口"""
+        if self.window_handle:
+            try:
+                # 如果窗口最小化，先恢复
+                if win32gui.IsIconic(self.window_handle):
+                    win32gui.ShowWindow(
+                        self.window_handle, win32con.SW_RESTORE)
+
+                # 将窗口置顶
+                win32gui.SetForegroundWindow(self.window_handle)
+
+                # 更新窗口位置信息
+                self.update_window_rect()
+            except Exception as e:
+                print(f"激活窗口失败: {e}")
+
+    def get_relative_coordinates(
+            self, screen_x: int, screen_y: int) -> Tuple[int, int]:
+        """将屏幕坐标转换为窗口客户区相对坐标"""
+        if not self.client_rect:
+            return screen_x, screen_y
+
+        # 计算相对于客户区左上角的坐标
+        rel_x = screen_x - self.client_rect[0]
+        rel_y = screen_y - self.client_rect[1]
+
+        # 计算相对百分比（0-1之间的值）
+        width = self.client_rect[2] - self.client_rect[0]
+        height = self.client_rect[3] - self.client_rect[1]
+        if width > 0 and height > 0:
+            rel_x = rel_x / width
+            rel_y = rel_y / height
+
+        return rel_x, rel_y
+
+    def get_screen_coordinates(
+            self, rel_x: float, rel_y: float) -> Tuple[int, int]:
+        """将窗口相对坐标（百分比）转换为屏幕坐标"""
+        if not self.client_rect:
+            return int(rel_x), int(rel_y)
+
+        # 更新窗口位置信息
+        self.update_window_rect()
+
+        # 计算客户区当前尺寸
+        width = self.client_rect[2] - self.client_rect[0]
+        height = self.client_rect[3] - self.client_rect[1]
+
+        # 将百分比转换为实际坐标
+        screen_x = int(self.client_rect[0] + (width * rel_x))
+        screen_y = int(self.client_rect[1] + (height * rel_y))
+
+        return screen_x, screen_y
+
+    def is_window_active(self) -> bool:
+        """检查绑定的窗口是否仍然有效"""
+        if not self.window_handle:
+            return False
+        return bool(win32gui.IsWindow(self.window_handle))
+
+
 
 
 # 允许绑定的窗口标题常量
@@ -18,12 +182,124 @@ ALLOWED_WINDOW_TITLES = [
     "银数",
 ]
 
+# 内置的自动化功能配置数据（新分组格式）
+EMBEDDED_FEATURES_DATA = {
+    "groups": [
+        {
+            "group_name": "默认",
+            "features": [
+                {
+                    "name": "开",
+                    "steps": [
+                        {
+                            "x": 0.1646,
+                            "y": 0.27449999999999997,
+                            "action": "左键单击",
+                            "delay": 1.0,
+                            "text": "",
+                            "click_count": 2,
+                            "click_interval": 0.05,
+                            "name": ""
+                        },
+                        {
+                            "x": 0.1641,
+                            "y": 0.27940000000000004,
+                            "action": "输入文本",
+                            "delay": 1.0,
+                            "text": "kb",
+                            "click_count": 1,
+                            "click_interval": 0.05,
+                            "name": ""
+                        },
+                        {
+                            "x": 0.2089,
+                            "y": 0.27940000000000004,
+                            "action": "左键单击",
+                            "delay": 0.0,
+                            "text": "",
+                            "click_count": 1,
+                            "click_interval": 0.05,
+                            "name": ""
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "group_name": "测试分组",
+            "features": [
+                {
+                    "name": "测试功能1",
+                    "steps": [
+                        {
+                            "x": 0.5,
+                            "y": 0.5,
+                            "action": "左键单击",
+                            "delay": 0.5,
+                            "text": "",
+                            "click_count": 1,
+                            "click_interval": 0.05,
+                            "name": "点击中心"
+                        }
+                    ]
+                },
+                {
+                    "name": "测试功能2",
+                    "steps": [
+                        {
+                            "x": 0.3,
+                            "y": 0.3,
+                            "action": "输入文本",
+                            "delay": 0.0,
+                            "text": "Hello World",
+                            "click_count": 1,
+                            "click_interval": 0.05,
+                            "name": "输入文本"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "group_name": "系统工具",
+            "features": [
+                {
+                    "name": "系统功能",
+                    "steps": [
+                        {
+                            "x": 0.1,
+                            "y": 0.1,
+                            "action": "右键单击",
+                            "delay": 1.0,
+                            "text": "",
+                            "click_count": 1,
+                            "click_interval": 0.05,
+                            "name": "右键菜单"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}
+
 
 class FeatureGroupViewer(QMainWindow):
     """功能分组展示器 - 左侧分组导航 + 右侧功能展示"""
     
     def __init__(self):
         super().__init__()
+        
+        # 安全检查
+        if SECURITY_ENABLED and not DEVELOPMENT_MODE:
+            if not security_utils.check_security():
+                QMessageBox.critical(None, "安全错误", "程序完整性验证失败")
+                import sys
+                sys.exit(1)
+        elif SECURITY_ENABLED and DEVELOPMENT_MODE:
+            # 开发模式下禁用安全保护
+            security_utils.disable_security()
+        
         self.features_data = []
         self.grouped_features = {}
         self.current_group = None
@@ -51,6 +327,10 @@ class FeatureGroupViewer(QMainWindow):
         """初始化UI"""
         self.setWindowTitle("自动化功能管理器")
         self.setGeometry(100, 100, 900, 600)  # 减小窗口尺寸
+        
+        # 设置窗口图标
+        from PySide6.QtGui import QIcon
+        self.setWindowIcon(QIcon("C.ico"))
         
         # 设置窗口样式
         self.setStyleSheet("""
@@ -339,16 +619,21 @@ class FeatureGroupViewer(QMainWindow):
     def load_features(self):
         """加载功能数据"""
         try:
-            with open('automation_features.json', 'r', encoding='utf-8') as f:
-                self.features_data = json.load(f)
+            # 使用内置数据（新分组格式）
+            embedded_data = EMBEDDED_FEATURES_DATA.copy()
+            print("✓ 使用内置配置数据")
             
-            # 按分组组织数据
+            # 直接使用新格式的分组数据
             self.grouped_features = {}
-            for feature in self.features_data:
-                group = feature.get('group', '未分组')
-                if group not in self.grouped_features:
-                    self.grouped_features[group] = []
-                self.grouped_features[group].append(feature)
+            self.features_data = []  # 保持向后兼容的扁平功能列表
+            
+            for group_data in embedded_data['groups']:
+                group_name = group_data['group_name']
+                group_features = group_data['features']
+                
+                self.grouped_features[group_name] = group_features
+                # 为向后兼容，也维护一个扁平的功能列表
+                self.features_data.extend(group_features)
             
             # 更新分组导航
             self.update_group_navigation()
@@ -357,13 +642,10 @@ class FeatureGroupViewer(QMainWindow):
             if self.grouped_features:
                 first_group = list(self.grouped_features.keys())[0]
                 self.show_group_features(first_group)
-                
-        except FileNotFoundError:
-            self.statusBar().showMessage("错误: 找不到 automation_features.json 文件")
-        except json.JSONDecodeError:
-            self.statusBar().showMessage("错误: JSON 文件格式错误")
         except Exception as e:
-            self.statusBar().showMessage(f"错误: {str(e)}")
+            # 使用空数据作为备用
+            self.features_data = []
+            self.grouped_features = {}
             
     def update_group_navigation(self):
         """更新分组导航"""
